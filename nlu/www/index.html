@@ -1,0 +1,35 @@
+<html>
+    <head>
+        <title>NLU Service</title>
+        <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+    </head>
+    <body>
+        <div>
+            NLU Service
+        </div>
+        <form>
+            <input id="text" placeholder="try it" autofocus />
+            <button type="submit">Try</button>
+        </form>
+        <pre id="result"></pre>
+        <script>
+            document.querySelector("form").addEventListener('submit', event => {
+                event.preventDefault()
+
+                const text = document.querySelector('#text').value.trim()
+                if (text.length <= 0) {
+                    alert('输入不能为空')
+                    return
+                }
+
+                (async () => {
+                    const ret = await fetch('/parse/' + encodeURIComponent(text))
+                    const obj = await ret.json()
+                    document.querySelector('#result').textContent = JSON.stringify(obj, null, 4)
+                    document.querySelector('#text').value = ''
+                })()
+                
+            })
+        </script>
+    </body>
+</html>

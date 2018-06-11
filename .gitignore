@@ -1,0 +1,7 @@
+*.py[cod]
+.vscode
+*.pkl
+.ipynb_checkpoints
+tmp
+node_modules
+nlu_data
