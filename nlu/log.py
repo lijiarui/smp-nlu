@@ -1,3 +1,4 @@
+"""日志模块"""
 
 import os
 import logging
@@ -10,6 +11,7 @@ LEVEL = {
 }
 
 def bootstrap():
+    """创建日志对象"""
 
     level = os.environ.get('NLU_LOG_LEVEL')
     if isinstance(level, str) and level.lower() in LEVEL:
@@ -17,9 +19,11 @@ def bootstrap():
     else:
         level = logging.INFO
 
-    # logging.basicConfig(level=level, format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    log_formator = logging.Formatter('%(asctime)s [%(threadName)s] [%(levelname)s] [%(filename)s] [%(funcName)s] [%(lineno)s] [%(message)s]')
-    
+    format_str = ' '.join([
+        '%(asctime)s', '[%(threadName)s]', '[%(levelname)s]',
+        '[%(filename)s]', '[%(funcName)s]', '[%(lineno)s]', '[%(message)s]'])
+    log_formator = logging.Formatter(format_str)
+
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(log_formator)
 

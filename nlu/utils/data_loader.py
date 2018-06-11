@@ -4,7 +4,6 @@ NLU_LOG_LEVEL=debug python3 -m nlu.utils.data_loader
 
 
 import os
-import re
 import yaml
 from nlu.log import LOG
 
@@ -12,47 +11,49 @@ def load_nlu_data(data_dir):
     """读取NLU数据目录的信息
     目录中应该有intents与entities子目录，分别保存意图和实体信息，为yaml格式
     """
-    assert os.path.exists(data_dir), '数据目录不存在'
-    entities_dir = os.path.join(data_dir, 'entities')
-    intents_dir = os.path.join(data_dir, 'intents')
-    assert os.path.exists(entities_dir), '实体目录不存在'
-    assert os.path.exists(intents_dir), '意图目录不存在'
+    assert os.path.exists(data_dir), '数据目录“{}”不存在'.format(data_dir)
 
-    LOG.debug('开始读取entities')
+    paths = []
+    for dirname, _, filenames in os.walk(data_dir):
+        filenames = [x for x in filenames if x.endswith('.yml')]
+        for filename in filenames:
+            path = os.path.join(dirname, filename)
+            paths.append(path)
+
+    assert paths, '找不到yaml数据文件，注意要以“.yml”后缀名结尾'
 
     entities = []
-    
-    for dirname, _, filenames in os.walk(entities_dir):
-        filenames = [x for x in filenames if x.endswith('.yml')]
-        for filename in filenames:
-            path = os.path.join(dirname, filename)
-            obj = yaml.load(open(path))
-            assert 'entity' in obj, 'entity的yaml文件必须包括entity键值 {}'.format(path)
-            assert isinstance(obj['entity'], str), 'entity的entity值必须是字符串 {}'.format(path)
-            assert 'data' in obj, 'entity的yaml文件必须包括data键值 {}'.format(path)
-            assert isinstance(obj['data'], list), 'entity的data值必须是列表 {}'.format(path)
-            assert len(obj['data']) > 0, 'entity的data列表元素应大于0 {}'.format(path)
-            entities.append(obj)
-
-    LOG.debug('开始读取intents')
-
     intents = []
-    
-    for dirname, _, filenames in os.walk(intents_dir):
-        filenames = [x for x in filenames if x.endswith('.yml')]
-        for filename in filenames:
-            path = os.path.join(dirname, filename)
-            obj = yaml.load(open(path))
-            assert 'intent' in obj, 'intent的yaml文件必须包括intent键值 {}'.format(path)
-            assert isinstance(obj['intent'], str), 'intent的intent值必须是字符串 {}'.format(path)
-            assert 'data' in obj, 'intent的yaml文件必须包括data键值 {}'.format(path)
-            assert isinstance(obj['data'], list), 'intent的data值必须是列表 {}'.format(path)
-            assert len(obj['data']) > 0, 'intent的data列表元素应大于0 {}'.format(path)
-            intents.append(obj)
-    
-    return intents, entities
-    
 
+    for path in paths:
+        with open(path, 'r') as fp:
+            try:
+                objs = yaml.load(fp)
+            except:
+                raise Exception('数据读取错误，可能不是合法YAML文件 “{}”'.format(path))
+            assert isinstance(objs, (list, tuple)), \
+                '数据文件必须是list or tuple “{}”'.format(path)
+
+            for obj in objs:
+                if isinstance(obj, dict):
+                    if 'intent' in obj:
+                        assert 'data' in obj, '意图必须包括“data”属性 “{}”'.format(path)
+                        assert isinstance(obj['data'], (list, tuple)) and obj['data'], \
+                            '意图必须包括“data”且长度大于0 “{}”'.format(path)
+                        intents.append(obj)
+                    elif 'entity' in obj:
+                        assert 'data' in obj, \
+                            '实体必须包括“data”属性 “{}”'.format(path)
+                        assert isinstance(obj['data'], (list, tuple)) and obj['data'], \
+                            '实体必须包括“data”且长度大于0 “{}”'.format(path)
+                        entities.append(obj)
+
+    LOG.debug(
+        '读取到了 %s 个intent， %s 个entity',
+        len(intents),
+        len(entities))
+
+    return intents, entities
 
 def unit_test():
     """unit test"""
@@ -63,4 +64,3 @@ def unit_test():
 
 if __name__ == '__main__':
     unit_test()
-

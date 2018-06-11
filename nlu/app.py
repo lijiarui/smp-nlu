@@ -9,15 +9,19 @@ from flask_cors import CORS
 from nlu.log import LOG
 
 def load_models(model_dir='./tmp/nlu_model'):
+    """加载模型"""
     config_path = os.path.join(model_dir, 'config.json')
 
     if not os.path.exists(config_path):
-        LOG.error('config_path not exsits "{}"'.format(config_path))
+        LOG.error('config_path not exsits "%s"', config_path)
         exit(1)
     pipeline_config = json.load(open(config_path))
     models = []
     for model_name in pipeline_config:
-        model = pickle.load(open(os.path.join(model_dir, '{}.pkl'.format(model_name)), 'rb'))
+        model = pickle.load(
+            open(os.path.join(
+                model_dir,
+                '{}.pkl'.format(model_name)), 'rb'))
         models.append((model_name, model))
     return models
 
@@ -27,31 +31,37 @@ MODELS = load_models()
 
 @APP.route('/')
 def web_root():
+    """根目录，测试用"""
     return APP.send_static_file('index.html')
 
 @APP.route('/parse/<sentence>')
 def web_parse(sentence=None):
+    """提供NLU服务"""
     if sentence is None:
         return jsonify(success=False, message='sentence is None')
 
     nlu_obj = {
-        'intents': [None],
-        'domains': [None],
-        'domains_pos': [],
-        'intents_pos': [],
+        'intent': None,
+        'domain': None,
         'slots': [],
         'text': sentence,
         'tokens': list(sentence),
     }
 
-    for _, model in MODELS:
-        nlu_obj = model.pipeline(nlu_obj)
-    
-    # return jsonify(
-    #     success=True,
-    #     result=nlu_obj
-    # )
+    LOG.debug('start %s models', len(MODELS))
+    for model_name, model in MODELS:
+        LOG.debug('through %s model', model_name)
+        if model.domain_implement:
+            LOG.debug('through %s model predict_domain', model_name)
+            nlu_obj = model.predict_domain(nlu_obj)
+        if model.intent_implement:
+            LOG.debug('through %s model predict_intent', model_name)
+            nlu_obj = model.predict_intent(nlu_obj)
+        if model.slot_implement:
+            LOG.debug('through %s model predict_slot', model_name)
+            nlu_obj = model.predict_slot(nlu_obj)
 
+    print(nlu_obj)
     return APP.response_class(
         response=simplejson.dumps({
             'success': True,

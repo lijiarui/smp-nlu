@@ -14,6 +14,7 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import make_scorer
 from sklearn.model_selection import cross_validate
 from nlu.log import LOG
+from nlu.engine.engine_core import EngineCore
 
 def single_sentence_to_features(sentence):
     sentence = [x.lower() for x in sentence]
@@ -152,11 +153,15 @@ def get_exact_right(slot_true, slot_pred):
             return False
     return True
 
-class CRFSlotFiller(object):
+class CRFSlotFiller(EngineCore):
     """注意文本都会变小写"""
 
     def __init__(self):
         """初始化"""
+        super(CRFSlotFiller, self).__init__(
+            domain_implement=False,
+            intent_implement=False,
+            slot_implement=True)
         self.crf = None
     
     def fit(self,
@@ -230,12 +235,12 @@ class CRFSlotFiller(object):
             crf.fit(x_train, y_train)
 
             self.crf = crf
-    
-    def pipeline(self, nlu_obj):
+
+    def predict_slot(self, nlu_obj):
         tokens = nlu_obj['tokens']
         tokens = [x.lower() for x in tokens]
         ret = self.predict([tokens])
-        LOG.debug('crf_slot_filler raw {}'.format(ret))
+        LOG.debug('crf_slot_filler raw %s', ret)
         crf_ret = get_slots_detail(nlu_obj['tokens'], ret[0])
         nlu_obj['crf_slot_filler'] = crf_ret
         if len(nlu_obj['slots']) <= 0:

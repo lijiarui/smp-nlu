@@ -13,7 +13,7 @@ from .ner import NER
 from .data_utils import batch_flow_bucket
 from .fake_data import generate
 from .word_sequence import WordSequence
-
+from nlu.engine.engine_core import EngineCore
 
 
 def get_slots_detail(sentence, slot):
@@ -62,7 +62,7 @@ def get_slots_detail(sentence, slot):
     return ret_list
 
 
-class NeuralSlotFiller(object):
+class NeuralSlotFiller(EngineCore):
     """ use seq2seq """
 
     x_ws = None
@@ -80,6 +80,10 @@ class NeuralSlotFiller(object):
                  use_residual=False, use_dropout=True, dropout=0.4,
                  output_project_active='tanh', crf_loss=True,
                  use_gpu=False):
+        super(NeuralSlotFiller, self).__init__(
+            domain_implement=False,
+            intent_implement=False,
+            slot_implement=True)
                  
         self.model_params = {
             'n_epoch': n_epoch,
@@ -187,17 +191,6 @@ class NeuralSlotFiller(object):
                 os.remove(path)
         
         # self.restore_model()
-
-    def __setstate__(self, state):
-        self.x_ws = state['x_ws']
-        self.y_ws = state['y_ws']
-        self.model_bytes = state['model_bytes']
-        self.model_params = state['model_params']
-        self.config = state['config']
-
-        # print('self.model_params', state['model_params'])
-        # exit(1)
-        self.restore_model()
     
     def restore_model(self):
         if self.model_bytes is not None:
@@ -241,7 +234,25 @@ class NeuralSlotFiller(object):
             'model_bytes': self.model_bytes,
             'model_params': self.model_params,
             'config': self.config,
+            'domain_implement': self.domain_implement,
+            'intent_implement': self.intent_implement,
+            'slot_implement': self.slot_implement,
         }
+
+    def __setstate__(self, state):
+        self.domain_implement = state['domain_implement']
+        self.intent_implement = state['intent_implement']
+        self.slot_implement = state['slot_implement']
+        
+        self.x_ws = state['x_ws']
+        self.y_ws = state['y_ws']
+        self.model_bytes = state['model_bytes']
+        self.model_params = state['model_params']
+        self.config = state['config']
+
+        # print('self.model_params', state['model_params'])
+        # exit(1)
+        self.restore_model()
     
     def get_params(self, deep=True):
         return self.model_params
@@ -315,7 +326,7 @@ class NeuralSlotFiller(object):
 
         return np.array(ret[:len(sentence_result)])
     
-    def pipeline(self, nlu_obj):
+    def predict_slot(self, nlu_obj):
         tokens = nlu_obj['tokens']
         tokens = [x.lower() for x in tokens]
         ret = self.predict([tokens])

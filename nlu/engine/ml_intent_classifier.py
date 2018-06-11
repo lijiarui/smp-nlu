@@ -17,13 +17,18 @@ from sklearn.model_selection import cross_validate
 from sklearn.metrics import make_scorer
 from nlu.log import LOG
 from nlu.utils.data_utils import SPLITOR
+from nlu.engine.engine_core import EngineCore
 
 
-class MLIntentClassifier(object):
+class MLIntentClassifier(EngineCore):
     """注意文本都会变小写"""
 
     def __init__(self):
         """初始化"""
+        super(MLIntentClassifier, self).__init__(
+            domain_implement=True,
+            intent_implement=True,
+            slot_implement=False)
         self.model = None
         self.vectorizer = None
     
@@ -47,7 +52,7 @@ class MLIntentClassifier(object):
         ]
 
         y_class = [
-            x[0][2:]
+            x
             for x in domain_result
         ]
 
@@ -68,7 +73,7 @@ class MLIntentClassifier(object):
         self.class_index = class_index
         self.index_class = index_class
 
-        y_train = [self.class_index[x[0][2:]] for x in domain_result]
+        y_train = [self.class_index[x] for x in domain_result]
 
         model = None
         if algorithm == 'RandomForest':
@@ -93,8 +98,8 @@ class MLIntentClassifier(object):
         model, x_train, y_train = self.build_model(sentence_result, domain_result, feature, algorithm)
         self.model = model
         self.model.fit(x_train, y_train)
-    
-    def pipeline(self, nlu_obj):
+
+    def predict_domain(self, nlu_obj):
         tokens = nlu_obj['tokens']
         tokens = [x.lower() for x in tokens]
         ret = self.predict([tokens])
@@ -104,13 +109,14 @@ class MLIntentClassifier(object):
             'prob': ret[1][0],
         }
         nlu_obj['ml_intent_classifier'] = ml_ret
-        if nlu_obj['domains'][0] is None:
-            nlu_obj['domains'][0] = ml_ret['domain']
-            nlu_obj['domains_pos'] = [(0, len(tokens))]
-        if nlu_obj['intents'][0] is None:
-            nlu_obj['intents'][0] = ml_ret['intent']
-            nlu_obj['intents_pos'] = [(0, len(tokens))]
+        if nlu_obj['domain'] is None:
+            nlu_obj['domain'] = ml_ret['domain']
+        if nlu_obj['intent'] is None:
+            nlu_obj['intent'] = ml_ret['intent']
         return nlu_obj
+    
+    def predict_intent(self, nlu_obj):
+        return self.predict_domain(nlu_obj)
 
     def predict(self, sentence_result):
         assert self.vectorizer is not None, 'vectorizer not fitted'
@@ -130,7 +136,7 @@ class MLIntentClassifier(object):
         assert self.model is not None, 'model not fitted'
 
         # x_test = self.vectorizer.transform([''.join(x) for x in sentence_result])
-        y_test = [x[0][2:] for x in domain_result]
+        y_test = [x for x in domain_result]
         y_pred, _ = self.predict(sentence_result)
 
         metrics = {

@@ -14,7 +14,8 @@ from .ner import NER
 from .data_utils import batch_flow_bucket
 from .fake_data import generate
 from .word_sequence import WordSequence
-
+from nlu.engine.engine_core import EngineCore
+from nlu.utils.data_utils import SPLITOR
 
 
 def get_slots_detail(sentence, slot):
@@ -63,7 +64,7 @@ def get_slots_detail(sentence, slot):
     return ret_list
 
 
-class NeuralIntentClassifierSlotFiller(object):
+class NeuralIntentClassifierSlotFiller(EngineCore):
     """ use seq2seq """
 
     x_ws = None
@@ -81,7 +82,11 @@ class NeuralIntentClassifierSlotFiller(object):
                  use_residual=False, use_dropout=True, dropout=0.4,
                  output_project_active='tanh', crf_loss=True,
                  use_gpu=False):
-                 
+        super(NeuralIntentClassifierSlotFiller, self).__init__(
+            domain_implement=True,
+            intent_implement=True,
+            slot_implement=True)
+
         self.model_params = {
             'n_epoch': n_epoch,
             'max_decode_step': max_decode_step,
@@ -113,7 +118,7 @@ class NeuralIntentClassifierSlotFiller(object):
         y_train = slot_result
 
         y_target = [
-            x[0][2:]
+            x
             for x in domain_result
         ]
 
@@ -207,19 +212,6 @@ class NeuralIntentClassifierSlotFiller(object):
                 os.remove(path)
         
         # self.restore_model()
-
-    def __setstate__(self, state):
-        self.x_ws = state['x_ws']
-        self.y_ws = state['y_ws']
-        self.model_bytes = state['model_bytes']
-        self.model_params = state['model_params']
-        self.config = state['config']
-        self.index_label = state['index_label']
-        self.label_index = state['label_index']
-
-        # print('self.model_params', state['model_params'])
-        # exit(1)
-        self.restore_model()
     
     def restore_model(self):
         if self.model_bytes is not None:
@@ -266,7 +258,27 @@ class NeuralIntentClassifierSlotFiller(object):
             'config': self.config,
             'index_label': self.index_label,
             'label_index': self.label_index,
+            'domain_implement': self.domain_implement,
+            'intent_implement': self.intent_implement,
+            'slot_implement': self.slot_implement,
         }
+
+    def __setstate__(self, state):
+        self.domain_implement = state['domain_implement']
+        self.intent_implement = state['intent_implement']
+        self.slot_implement = state['slot_implement']
+        
+        self.x_ws = state['x_ws']
+        self.y_ws = state['y_ws']
+        self.model_bytes = state['model_bytes']
+        self.model_params = state['model_params']
+        self.config = state['config']
+        self.index_label = state['index_label']
+        self.label_index = state['label_index']
+
+        # print('self.model_params', state['model_params'])
+        # exit(1)
+        self.restore_model()
     
     def get_params(self, deep=True):
         return self.model_params
@@ -344,17 +356,27 @@ class NeuralIntentClassifierSlotFiller(object):
             ]
 
         return np.array(ret[:len(sentence_result)]), np.array(reti[:len(sentence_result)])
-    
-    def pipeline(self, nlu_obj):
+
+    def predict_domain(self, nlu_obj):
         tokens = nlu_obj['tokens']
         tokens = [x.lower() for x in tokens]
-        ret = self.predict([tokens])
-        # LOG.debug('neural_slot_filler raw {}'.format(ret))
-        crf_ret = get_slots_detail(nlu_obj['tokens'], ret[0])
-        nlu_obj['neural_slot_filler'] = crf_ret
+        slots, intent = self.predict([tokens])
+        crf_ret = get_slots_detail(tokens, slots[0])
+        nicsf_ret = {
+            'domain': intent[0].split(SPLITOR)[0],
+            'intent': intent[0].split(SPLITOR)[1],
+            'slots': crf_ret
+        }
+        nlu_obj['neural_intent_classifier_slot_filler'] = nicsf_ret
         if len(nlu_obj['slots']) <= 0:
             nlu_obj['slots'] = crf_ret
         return nlu_obj
+    
+    def predict_intent(self, nlu_obj):
+        return self.predict_domain(nlu_obj)
+    
+    def predict_slot(self, nlu_obj):
+        return self.predict_domain(nlu_obj)
 
     def eval(self, sentence_result, y_data, progress=False):
 
@@ -363,7 +385,7 @@ class NeuralIntentClassifierSlotFiller(object):
         y_pred, y_pred_target = self.predict(sentence_result, progress=progress)
         y_test = slot_result
         y_target = np.array([
-            [x[0][2:]]
+            [x]
             for x in domain_result
         ])
         y_pred_target = np.array([
@@ -396,7 +418,7 @@ class NeuralIntentClassifierSlotFiller(object):
 
         slot_result, domain_result = list(zip(*y_data))
         y_target = [
-            x[0][2:]
+            x
             for x in domain_result
         ]
         labels = sorted(list(set(y_target)), key=lambda x: (len(x), x))
@@ -413,7 +435,7 @@ class NeuralIntentClassifierSlotFiller(object):
         def score_func_intent(y_true, y_pred):
             _, y_true_b = list(zip(*y_true))
             _, y_pred_b = y_pred
-            y_true_b = [x[0][2:] for x in y_true_b]
+            y_true_b = [x for x in y_true_b]
             y_true_b = [label_index[x] for x in y_true_b]
             y_pred_b = [label_index[x] for x in y_pred_b]
                 
