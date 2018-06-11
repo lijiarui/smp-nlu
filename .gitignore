@@ -4,4 +4,4 @@
 .ipynb_checkpoints
 tmp
 node_modules
-nlu_data
+nlu_data/*.yml
