@@ -17,10 +17,11 @@ from nlu.log import LOG
 from nlu.engine.engine_core import EngineCore
 
 def single_sentence_to_features(sentence):
+    """转换单个句子的特征"""
     sentence = [x.lower() for x in sentence]
     features = []
-    for i in range(len(sentence)):
-        token = sentence[i]
+    for i, token in enumerate(sentence):
+        # token = sentence[i]
         token_prev_3 = '_' if i - 3 < 0 else sentence[i - 3]
         token_prev_2 = '_' if i - 2 < 0 else sentence[i - 2]
         token_prev = '_' if i == 0 else sentence[i - 1]
@@ -46,23 +47,35 @@ def single_sentence_to_features(sentence):
             'token+2:token+3': token_next_2 + token_next_3,
             'isEnglishChar': True if re.match(r'[a-zA-Z]', token) else False,
             'isNumberChar': True if re.match(r'[0-9]', token) else False,
-            'isChineseNumberChar': True if re.match(r'[一二三四五六七八九十零俩仨]', token) else False,
-            'isChineseChar': True if re.match(r'[\u4e00-\u9ffff]', token) else False,
-            'isChinesePunctuationChar': True if re.match(r'[，。？！：；《》]', token) else False,
-            'isChinesePunctuationChar-1': True if re.match(r'[，。？！：；《》]', token_prev) else False,
-            'isChinesePunctuationChar+1': True if re.match(r'[，。？！：；《》]', token_next) else False,
+            'isChineseNumberChar': \
+                True if re.match(r'[一二三四五六七八九十零俩仨]', token) \
+                    else False,
+            'isChineseChar': \
+                True if re.match(r'[\u4e00-\u9ffff]', token) \
+                    else False,
+            'isChinesePunctuationChar': \
+                True if re.match(r'[，。？！：；《》]', token) \
+                    else False,
+            'isChinesePunctuationChar-1': \
+                True if re.match(r'[，。？！：；《》]', token_prev) \
+                    else False,
+            'isChinesePunctuationChar+1': \
+                True if re.match(r'[，。？！：；《》]', token_next) \
+                    else False,
         }
         features.append(feature)
     return features
 
 
 def sentences_to_features(sentence_result):
+    """把句子们转换为特征"""
     x_train = []
     for s in sentence_result:
         x_train.append(single_sentence_to_features(s))
     return x_train
 
 def get_slots(sentence, slot):
+    """转换结果"""
     current = None
     current_str = []
     ret = []
@@ -92,7 +105,7 @@ def get_slots(sentence, slot):
 
     if current is not None:
         ret.append((current, ''.join(current_str)))
-        
+
     ret_dict = {}
     for s, v in ret:
         if s not in ret_dict:
@@ -110,6 +123,7 @@ def get_slots_detail(sentence, slot):
     current = None
     current_str = []
     ret = []
+    i = 0
     for i, (s, ss) in enumerate(zip(sentence, slot)):
         if ss != 'O':
             ss = ss[2:]
@@ -120,18 +134,24 @@ def get_slots_detail(sentence, slot):
                 if current == ss:
                     current_str.append(s)
                 else:
-                    ret.append((current, ''.join(current_str), i - len(current_str), i))
+                    ret.append((
+                        current,
+                        ''.join(current_str),
+                        i - len(current_str), i))
                     current = ss
                     current_str = [s]
         else:
             if current is not None:
-                ret.append((current, ''.join(current_str), i - len(current_str), i))
+                ret.append((
+                    current,
+                    ''.join(current_str),
+                    i - len(current_str), i))
                 current = None
                 current_str = []
 
     if current is not None:
         ret.append((current, ''.join(current_str), i - len(current_str), i))
-        
+
     ret_list = []
     for s, v, start, end in ret:
         ret_list.append({
@@ -163,7 +183,7 @@ class CRFSlotFiller(EngineCore):
             intent_implement=False,
             slot_implement=True)
         self.crf = None
-    
+
     def fit(self,
             sentence_result, slot_result,
             max_iterations=100, c1=0.17, c2=0.01):
@@ -182,22 +202,19 @@ class CRFSlotFiller(EngineCore):
             labels.update(x)
         labels = sorted(list(labels))
         labels.remove('O')
-        LOG.debug('labels: {}'.format(', '.join(labels)))
+        LOG.debug('labels: %s', ', '.join(labels))
         self.labels = labels
 
-        try:
-            LOG.debug('CRFSlotFiller try write tmp train data')
-            with open('/tmp/crf_slot_filler.tmp', 'w') as fp:
-                for x, y in zip(sentence_result, slot_result):
-                    line = []
-                    for i in range(len(x)):
-                        line.append('{}\t{}'.format(x[i], y[i]))
-                    fp.write('\n'.join(line) + '\n\n')
-            LOG.debug('CRFSlotFiller try write tmp train data done')
-        except:
-            pass
+        LOG.debug('CRFSlotFiller try write tmp train data')
+        with open('/tmp/crf_slot_filler.tmp', 'w') as fp:
+            for x, y in zip(sentence_result, slot_result):
+                line = []
+                for i, x_i in enumerate(x):
+                    line.append('{}\t{}'.format(x_i, y[i]))
+                fp.write('\n'.join(line) + '\n\n')
+        LOG.debug('CRFSlotFiller try write tmp train data done')
 
-        LOG.debug('x_train %d, y_train %d' % (len(x_train), len(y_train)))
+        LOG.debug('x_train %d, y_train %d', len(x_train), len(y_train))
 
         if os.environ.get('CRF') == 'search':
             crf = CRF(
@@ -209,7 +226,10 @@ class CRFSlotFiller(EngineCore):
                 'c1': scipy.stats.expon(scale=0.5),
                 'c2': scipy.stats.expon(scale=0.05),
             }
-            f1_score = make_scorer(metrics.flat_f1_score, average='weighted', labels=labels)
+            f1_score = make_scorer(
+                metrics.flat_f1_score,
+                average='weighted',
+                labels=labels)
             rs = RandomizedSearchCV(
                 crf,
                 params_space,
@@ -220,8 +240,8 @@ class CRFSlotFiller(EngineCore):
                 scoring=f1_score
             )
             rs.fit(x_train, y_train)
-            LOG.debug('best params: {}'.format(rs.best_params_))
-            LOG.debug('best cv score: {}'.format(rs.best_score_))
+            LOG.debug('best params: %s', rs.best_params_)
+            LOG.debug('best cv score: %s', rs.best_score_)
             self.crf = rs.best_estimator_
         else:
 
@@ -237,17 +257,19 @@ class CRFSlotFiller(EngineCore):
             self.crf = crf
 
     def predict_slot(self, nlu_obj):
+        """识别实体"""
         tokens = nlu_obj['tokens']
         tokens = [x.lower() for x in tokens]
         ret = self.predict([tokens])
         LOG.debug('crf_slot_filler raw %s', ret)
         crf_ret = get_slots_detail(nlu_obj['tokens'], ret[0])
-        nlu_obj['crf_slot_filler'] = crf_ret
+        nlu_obj['crf_slot_filler'] = {'slots': crf_ret}
         if len(nlu_obj['slots']) <= 0:
             nlu_obj['slots'] = crf_ret
         return nlu_obj
-    
+
     def predict(self, sentence_result):
+        """预测实体"""
         assert self.crf is not None, 'model not fitted'
 
         x_test = sentences_to_features(sentence_result)
@@ -255,20 +277,24 @@ class CRFSlotFiller(EngineCore):
         return y_pred
 
     def eval(self, sentence_result, slot_result):
-
+        """评估结果"""
         y_pred = self.predict(sentence_result)
         y_test = slot_result
         return {
-            'precision': metrics.flat_precision_score(y_test, y_pred, average='weighted'),
-            'recall': metrics.flat_recall_score(y_test, y_pred, average='weighted'),
-            'f1': metrics.flat_f1_score(y_test, y_pred, average='weighted'),
-            'accuracy': metrics.flat_accuracy_score(y_test, y_pred),
+            'precision': metrics.flat_precision_score(
+                y_test, y_pred, average='weighted'),
+            'recall': metrics.flat_recall_score(
+                y_test, y_pred, average='weighted'),
+            'f1': metrics.flat_f1_score(
+                y_test, y_pred, average='weighted'),
+            'accuracy': metrics.flat_accuracy_score(
+                y_test, y_pred),
         }
-    
-    @staticmethod
-    def cv_eval(sentence_result, slot_result, cv=5, max_iterations=100, c1=0.17, c2=0.01):
-        """用cv验证模型"""
 
+    @staticmethod
+    def cv_eval(sentence_result, slot_result,
+                cv=5, max_iterations=100, c1=0.17, c2=0.01):
+        """用cv验证模型"""
         x_train = sentences_to_features(sentence_result)
         y_train = slot_result
         f1_score = make_scorer(metrics.flat_f1_score, average='weighted')
@@ -291,8 +317,8 @@ class CRFSlotFiller(EngineCore):
             print(np.mean(v))
             print(v)
 
-    
     def exact_eval(self, sentence_result, slot_result):
+        """绝对性的评价"""
 
         y_pred = self.predict(sentence_result)
         y_test = slot_result
@@ -300,14 +326,13 @@ class CRFSlotFiller(EngineCore):
         bad = []
         for sent, real, pred in zip(sentence_result, y_test, y_pred):
             real_slot = get_slots(sent, real)
-            pred_slot =  get_slots(sent, pred)
+            pred_slot = get_slots(sent, pred)
             a = get_exact_right(real_slot, pred_slot)
             acc += a
             if not a:
                 bad.append((sent, real, pred, real_slot, pred_slot))
         acc /= len(sentence_result)
         return acc, bad
-    
 
 def unit_test():
     """unit test"""
@@ -329,10 +354,10 @@ def unit_test():
 
     LOG.debug('crf fitted')
 
-    metrics = eng.eval(sentence_result, slot_result)
-    for k, v in metrics.items():
+    m = eng.eval(sentence_result, slot_result)
+    for k, v in m.items():
         print(k, v)
-    
+
     acc, bad = eng.exact_eval(sentence_result, slot_result)
     print('exact acc', acc)
     print('bad count', len(bad))

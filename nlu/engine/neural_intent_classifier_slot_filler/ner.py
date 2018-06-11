@@ -717,7 +717,7 @@ class NER(object):
                 item = pred[i][:encoder_inputs_length[i]]
                 preds.append(item)
 
-            return np.array(preds), softmax.argmax(1)
+            return np.array(preds), softmax.argmax(1), softmax.max(1)
         # else:
         pred, softmax = sess.run([self.outputs, self.softmax_output], input_feed)
         preds = []
@@ -725,4 +725,4 @@ class NER(object):
             item = pred[i][:encoder_inputs_length[i]]
             preds.append(item)
 
-        return np.array(preds), softmax.argmax(1)
+        return np.array(preds), softmax.argmax(1), softmax.max(1)

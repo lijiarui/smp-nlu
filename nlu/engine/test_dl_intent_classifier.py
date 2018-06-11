@@ -1,3 +1,4 @@
+"""测试dl_intent_classifier"""
 
 from nlu.log import LOG
 from nlu.engine.dl_intent_classifier import DLIntentClassifier
@@ -39,7 +40,7 @@ def unit_test():
     for k, v in metrics.items():
         if k != 'bad':
             print(k, v)
-    
+
     print('bad count', len(metrics['bad']))
     for b in metrics['bad']:
         # sentence, real, pred

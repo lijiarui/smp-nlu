@@ -38,14 +38,16 @@ def load_nlu_data(data_dir):
                 if isinstance(obj, dict):
                     if 'intent' in obj:
                         assert 'data' in obj, '意图必须包括“data”属性 “{}”'.format(path)
-                        assert isinstance(obj['data'], (list, tuple)) and obj['data'], \
-                            '意图必须包括“data”且长度大于0 “{}”'.format(path)
+                        assert isinstance(obj['data'], (list, tuple)) \
+                            and obj['data'], \
+                                '意图必须包括“data”且长度大于0 “{}”'.format(path)
                         intents.append(obj)
                     elif 'entity' in obj:
                         assert 'data' in obj, \
                             '实体必须包括“data”属性 “{}”'.format(path)
-                        assert isinstance(obj['data'], (list, tuple)) and obj['data'], \
-                            '实体必须包括“data”且长度大于0 “{}”'.format(path)
+                        assert isinstance(obj['data'], (list, tuple)) \
+                            and obj['data'], \
+                                '实体必须包括“data”且长度大于0 “{}”'.format(path)
                         entities.append(obj)
 
     LOG.debug(

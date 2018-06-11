@@ -1,5 +1,4 @@
-""" for unit test
-"""
+"""测试neural_intent_classifier_slot_filler"""
 
 from nlu.log import LOG
 from nlu.engine.neural_intent_classifier_slot_filler import NeuralIntentClassifierSlotFiller
@@ -29,7 +28,7 @@ def unit_test():
     metrics = eng.eval(sentence_result, y_data, progress=True)
     for k, v in metrics.items():
         print(k, v)
-    
+
     # acc, bad = eng.exact_eval(sentence_result, slot_result)
     # print('exact acc', acc)
     # print('bad count', len(bad))

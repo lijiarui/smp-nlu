@@ -9,11 +9,11 @@ class EngineCore(object):
         self.intent_implement = intent_implement
         self.slot_implement = slot_implement
 
-    def predict_domain(self):
+    def predict_domain(self, _):
         raise Exception('domain not implement')
 
-    def predict_intent(self):
+    def predict_intent(self, _):
         raise Exception('intent not implement')
 
-    def predict_slot(self):
+    def predict_slot(self, _):
         raise Exception('slot not implement')

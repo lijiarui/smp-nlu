@@ -310,6 +310,7 @@ class NeuralIntentClassifierSlotFiller(EngineCore):
     def predict(self, sentence_result, progress=False):
         ret = []
         reti = []
+        retip = []
 
         batch_size = self.model_params['batch_size']
         bar = range(0, len(sentence_result), batch_size)
@@ -333,38 +334,36 @@ class NeuralIntentClassifierSlotFiller(EngineCore):
 
             x_test, x_test_len = np.array(x_test), np.array(x_test_len)
 
-            # print('x_test.shape', x_test.shape, 'x_test_len.shape', x_test_len.shape, x_test_len)
-
             with self.graph.as_default():
-                # try:
-                r, i = self.model.predict(
+                r, intent, intent_prob = self.model.predict(
                     self.sess,
                     x_test,
                     x_test_len
                 )
-                # except:
-                #     print('x_test', x_test, 'x_test_len', x_test_len)
-                #     r = []
-                #     for x in batch:
-                #         r.append(['O'] * len(x))
             ret += [
                 self.y_ws.inverse_transform(y)[:len(x)]
                 for x, y in zip(batch, r)
             ]
             reti += [
-                self.index_label[x] for x in i
+                self.index_label[x] for x in intent
+            ]
+            retip += [
+                x for x in intent_prob
             ]
 
-        return np.array(ret[:len(sentence_result)]), np.array(reti[:len(sentence_result)])
+        return (np.array(ret[:len(sentence_result)]),
+                np.array(reti[:len(sentence_result)]),
+                np.array(retip[:len(sentence_result)]))
 
     def predict_domain(self, nlu_obj):
         tokens = nlu_obj['tokens']
         tokens = [x.lower() for x in tokens]
-        slots, intent = self.predict([tokens])
+        slots, intent, intent_prob = self.predict([tokens])
         crf_ret = get_slots_detail(tokens, slots[0])
         nicsf_ret = {
             'domain': intent[0].split(SPLITOR)[0],
             'intent': intent[0].split(SPLITOR)[1],
+            'prob': float(intent_prob[0]),
             'slots': crf_ret
         }
         nlu_obj['neural_intent_classifier_slot_filler'] = nicsf_ret

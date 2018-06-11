@@ -33,13 +33,16 @@ class RegexItem(object):
                     return temp.format(
                         slot_name=slot_name,
                         slot_regex=index_entities_regex[slot_name])
-                else:
-                    return temp.format(
-                        slot_name=slot_name,
-                        slot_regex=part['text'])
+                # else:
+                return temp.format(
+                    slot_name=slot_name,
+                    slot_regex=part['text'])
             return part['text']
 
-        self.patten = re.compile('^' + ''.join([_replace(x) for x in self.data]) + '$')
+        self.patten = re.compile(
+            '^' + \
+            ''.join([_replace(x) for x in self.data]) + \
+            '$')
         LOG.debug('pattens: %s', self.patten)
 
     def predict(self, text):
@@ -92,6 +95,7 @@ class RegexEngine(EngineCore):
         self.items = ret
 
     def predict_domain(self, nlu_obj):
+        """预测领域"""
         text = nlu_obj['text']
         ret = self.predict(text)
         if ret is not None:
@@ -103,9 +107,11 @@ class RegexEngine(EngineCore):
         return nlu_obj
 
     def predict_intent(self, nlu_obj):
+        """预测意图"""
         return self.predict_domain(nlu_obj)
 
     def predict_slot(self, nlu_obj):
+        """预测实体"""
         return self.predict_domain(nlu_obj)
 
     def predict(self, text):
@@ -115,6 +121,7 @@ class RegexEngine(EngineCore):
             p = item.predict(text)
             if p is not None:
                 return p
+        return None
 
     def get_index_entities_regex(self, entities):
         """将实体列表转换为正则表达式

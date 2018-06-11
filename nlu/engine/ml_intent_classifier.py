@@ -31,19 +31,26 @@ class MLIntentClassifier(EngineCore):
             slot_implement=False)
         self.model = None
         self.vectorizer = None
-    
+
     def build_vectorizer(self, feature):
+        """构建预料表"""
+
         if feature == 'tfidf':
-            v = TfidfVectorizer(analyzer='char', ngram_range=(1, 2), max_features=20000)
+            v = TfidfVectorizer(
+                analyzer='char', ngram_range=(1, 2),
+                max_features=20000)
             self.vectorizer = v
         elif feature == 'hashing':
-            v = HashingVectorizer(analyzer='char', ngram_range=(1, 2), n_features=500)
+            v = HashingVectorizer(
+                analyzer='char', ngram_range=(1, 2),
+                n_features=500)
             self.vectorizer = v
 
         if self.vectorizer is None:
             raise Exception('Unknown feature "{}"'.format(feature))
 
     def build_model(self, sentence_result, domain_result, feature, algorithm):
+        """构建模型"""
 
         self.build_vectorizer(feature)
 
@@ -56,13 +63,10 @@ class MLIntentClassifier(EngineCore):
             for x in domain_result
         ]
 
-        try:
-            with open('/tmp/ml_intent_classifier.tmp', 'w') as fp:
-                for x, y in zip(x_text, y_class):
-                    fp.write('{}\t{}\n'.format(x, y))
-        except:
-            pass
-        
+        with open('/tmp/ml_intent_classifier.tmp', 'w') as fp:
+            for x, y in zip(x_text, y_class):
+                fp.write('{}\t{}\n'.format(x, y))
+
         x_train = self.vectorizer.fit_transform(x_text)
 
         class_index = {}
@@ -77,14 +81,20 @@ class MLIntentClassifier(EngineCore):
 
         model = None
         if algorithm == 'RandomForest':
-            model = RandomForestClassifier(random_state=0, class_weight='balanced', n_jobs=-1)
+            model = RandomForestClassifier(
+                random_state=0,
+                class_weight='balanced', n_jobs=-1)
         elif algorithm == 'SVC':
-            model = SVC(random_state=0, probability=True, class_weight='balanced')
+            model = SVC(
+                random_state=0,
+                probability=True, class_weight='balanced')
         elif algorithm == 'LinearSVC':
-            model = LinearSVC(random_state=0, class_weight='balanced')
+            model = LinearSVC(
+                random_state=0,
+                class_weight='balanced')
         else:
             raise Exception('Unknown algorithm "{}"'.format(algorithm))
-        
+
         return model, x_train, y_train
 
 
@@ -95,7 +105,9 @@ class MLIntentClassifier(EngineCore):
         """fit model"""
 
         LOG.debug('fit MLIntentClassifier')
-        model, x_train, y_train = self.build_model(sentence_result, domain_result, feature, algorithm)
+        model, x_train, y_train = self.build_model(
+            sentence_result, domain_result,
+            feature, algorithm)
         self.model = model
         self.model.fit(x_train, y_train)
 
@@ -114,24 +126,28 @@ class MLIntentClassifier(EngineCore):
         if nlu_obj['intent'] is None:
             nlu_obj['intent'] = ml_ret['intent']
         return nlu_obj
-    
+
     def predict_intent(self, nlu_obj):
+        """预测意图"""
         return self.predict_domain(nlu_obj)
 
     def predict(self, sentence_result):
+        """预测结果"""
         assert self.vectorizer is not None, 'vectorizer not fitted'
         assert self.model is not None, 'model not fitted'
 
-        x_test = self.vectorizer.transform([''.join(x).lower() for x in sentence_result])
+        x_test = self.vectorizer.transform(
+            [''.join(x).lower() for x in sentence_result])
         y_pred = self.model.predict(x_test)
         if hasattr(self.model, 'predict_proba'):
             y_prob = self.model.predict_proba(x_test).max(1)
         else:
             y_prob = [[-1]] * len(y_pred)
-        
+
         return [self.index_class[x] for x in y_pred], [x for x in y_prob]
-    
+
     def eval(self, sentence_result, domain_result):
+        """评估模型"""
         assert self.vectorizer is not None, 'vectorizer not fitted'
         assert self.model is not None, 'model not fitted'
 
@@ -154,18 +170,20 @@ class MLIntentClassifier(EngineCore):
                     r,
                     p
                 ))
-        
+
         metrics['bad'] = bad
 
         return metrics
-    
+
     @staticmethod
     def cv_eval(sentence_result, domain_result, cv=5,
                 feature='tfidf',
                 algorithm='RandomForest'):
+        """cv方法评估模型"""
         np.random.seed(0)
         ml = MLIntentClassifier()
-        model, x_train, y_train = ml.build_model(sentence_result, domain_result, feature, algorithm)
+        model, x_train, y_train = ml.build_model(
+            sentence_result, domain_result, feature, algorithm)
         score = make_scorer(f1_score, average='weighted')
         cv_result = cross_validate(
             model, x_train, y_train,
@@ -205,7 +223,9 @@ def unit_test():
     exit(0)
 
     eng = MLIntentClassifier()
-    eng.fit(sentence_result, domain_result, feature=feature, algorithm=algorithm)
+    eng.fit(
+        sentence_result, domain_result,
+        feature=feature, algorithm=algorithm)
 
     LOG.debug('ml fitted')
 
@@ -215,7 +235,7 @@ def unit_test():
     for k, v in metrics.items():
         if k != 'bad':
             print(k, v)
-    
+
     print('bad count', len(metrics['bad']))
     for b in metrics['bad']:
         # sentence, real, pred

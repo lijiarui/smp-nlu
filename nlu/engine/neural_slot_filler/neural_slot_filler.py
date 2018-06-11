@@ -332,7 +332,7 @@ class NeuralSlotFiller(EngineCore):
         ret = self.predict([tokens])
         # LOG.debug('neural_slot_filler raw {}'.format(ret))
         crf_ret = get_slots_detail(nlu_obj['tokens'], ret[0])
-        nlu_obj['neural_slot_filler'] = crf_ret
+        nlu_obj['neural_slot_filler'] = {'slots': crf_ret}
         if len(nlu_obj['slots']) <= 0:
             nlu_obj['slots'] = crf_ret
         return nlu_obj

@@ -44,7 +44,7 @@ def convert_item(intent, index_entities_data):
 
     sentence_results, slot_results, domain_results = [], [], []
 
-    for i in range(100):
+    for _ in range(100):
 
         sentence_result = []
         slot_result = []
@@ -54,7 +54,7 @@ def convert_item(intent, index_entities_data):
                 slot_name = item['name']
                 assert slot_name in index_entities_data
                 slot_value = np.random.choice(index_entities_data[slot_name])
-                
+
                 sentence_result += list(slot_value)
                 slot_result += fill_iob(slot_name, slot_value)
             else:
