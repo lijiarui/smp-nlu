@@ -12,6 +12,8 @@ from nlu.engine.engine_core import EngineCore
 class RegexItem(object):
     """根据某条intent数据和实体列表，构建一个用于判断intent、domain、slot的对象"""
 
+    SlotNameSplitor = '___'
+
     def __init__(self, intent, index_entities_regex):
         """初始化"""
 
@@ -24,14 +26,20 @@ class RegexItem(object):
             else intent['domain'].strip()
         self.data = intent['data']
 
+        slot_index = {}
         def _replace(part):
             """转换部分句子结构，如果这个部分是实体，就返回正则表达式，如果是普通文本，就返回文本"""
             if 'name' in part:
                 slot_name = part['name']
-                temp = '(?P<{slot_name}>{slot_regex})'
+                if slot_name not in slot_index:
+                    slot_index[slot_name] = 0
+                slot_index[slot_name] += 1
+                temp = '(?P<{slot_name}{splitor}{index}>{slot_regex})'
                 if slot_name in index_entities_regex:
                     return temp.format(
                         slot_name=slot_name,
+                        splitor=self.SlotNameSplitor,
+                        index=slot_index[slot_name],
                         slot_regex=index_entities_regex[slot_name])
                 # else:
                 return temp.format(
@@ -65,7 +73,7 @@ class RegexItem(object):
 
             ret['slots'].append({
                 'slot_value': slot_value,
-                'slot_name': slot_name,
+                'slot_name': slot_name.split(self.SlotNameSplitor)[0],
                 'pos': reg})
         return ret
 
