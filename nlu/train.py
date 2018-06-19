@@ -25,7 +25,7 @@ def pipline():
         'crf_slot_filler',
         'dl_intent_classifier',
         'neural_slot_filler',
-        'neural_intent_classifier_slot_filler',
+        # 'neural_intent_classifier_slot_filler',
     ]
 
     build_model(nlu_data, model_dir, pipline_config)

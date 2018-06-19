@@ -367,8 +367,29 @@ class NeuralIntentClassifierSlotFiller(EngineCore):
             'slots': crf_ret
         }
         nlu_obj['neural_intent_classifier_slot_filler'] = nicsf_ret
+        for slot in crf_ret:
+            slot['from'] = 'neural_intent_classifier_slot_filler'
         if len(nlu_obj['slots']) <= 0:
             nlu_obj['slots'] = crf_ret
+        else:
+            for slot in crf_ret:
+                is_include = False
+                for s in nlu_obj['slots']:
+                    if slot['pos'][0] >= s['pos'][0] and slot['pos'][0] <= s['pos'][1]:
+                        is_include = True
+                        break
+                    elif slot['pos'][1] >= s['pos'][0] and slot['pos'][1] <= s['pos'][1]:
+                        is_include = True
+                        break
+                    elif s['pos'][0] >= slot['pos'][0] and s['pos'][0] <= slot['pos'][1]:
+                        is_include = True
+                        break
+                    elif s['pos'][1] >= slot['pos'][0] and s['pos'][1] <= slot['pos'][1]:
+                        is_include = True
+                        break
+                if not is_include:
+                    nlu_obj['slots'].append(slot)
+                    nlu_obj['slots'] = sorted(nlu_obj['slots'], key=lambda x: x['pos'][0])
         return nlu_obj
     
     def predict_intent(self, nlu_obj):

@@ -44,7 +44,7 @@ def convert_item(intent, index_entities_data):
 
     sentence_results, slot_results, domain_results = [], [], []
 
-    for _ in range(100):
+    for _ in range(500):
 
         sentence_result = []
         slot_result = []
