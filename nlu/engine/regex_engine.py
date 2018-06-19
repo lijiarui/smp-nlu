@@ -6,8 +6,11 @@ NLU_LOG_LEVEL=debug python3 -m nlu.engine.regex_engine
 """
 
 import re
+from sklearn.utils import shuffle
 from nlu.log import LOG
 from nlu.engine.engine_core import EngineCore
+
+LIMIT = 1000
 
 class RegexItem(object):
     """根据某条intent数据和实体列表，构建一个用于判断intent、domain、slot的对象"""
@@ -134,6 +137,15 @@ class RegexEngine(EngineCore):
     def get_index_entities_regex(self, entities):
         """将实体列表转换为正则表达式
         """
+        def _clean_re(x):
+            """去掉特殊字符，下面的地址中包含所有特殊字符
+            Here’s a complete list of the metacharacters; their meanings will be discussed in the rest of this HOWTO.
+            https://docs.python.org/3/howto/regex.html
+            """
+            l = ['.', '^', '$', '*', '+', '?', '{' '}', '[' ']', '\\', '|', '(', ')']
+            for ll in l:
+                x = x.replace(ll, '\\' + ll)
+            return x
         ret = {}
         for x in entities:
             assert 'entity' in x and isinstance(x['entity'], str), \
@@ -146,6 +158,13 @@ class RegexEngine(EngineCore):
                     for iitem in item:
                         if isinstance(iitem, str):
                             data.append(iitem)
+            if len(data) > LIMIT:
+                data = shuffle(data, random_state=0)
+                data = data[:LIMIT]
+            data = [
+                _clean_re(x)
+                for x in data
+            ]
             r = '(?:' + '|'.join(data) + ')'
             if 'regex' in x:
                 r += '|(?:' + x['regex'] + ')'

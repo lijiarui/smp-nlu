@@ -252,6 +252,9 @@ class CRFSlotFiller(EngineCore):
                 max_iterations=max_iterations,
                 all_possible_transitions=True
             )
+            for x, y in zip(x_train, y_train):
+                assert len(x) == len(y), '"{}", "{}" diff'.format(
+                    str([xx['token'] for xx in x]), str(y))
             crf.fit(x_train, y_train)
 
             self.crf = crf
