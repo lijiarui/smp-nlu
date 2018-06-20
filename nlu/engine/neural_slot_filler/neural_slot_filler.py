@@ -257,7 +257,7 @@ class NeuralSlotFiller(EngineCore):
     def get_params(self, deep=True):
         return self.model_params
     
-    def set_params(self, n_epoch=10, batch_size=64, learning_rate=0.001,
+    def set_params(self, n_epoch=20, batch_size=64, learning_rate=0.001,
                    hidden_units=64, embedding_size=64,
                    bidirectional=True, cell_type='lstm', depth=1,
                    use_residual=False, use_dropout=True, dropout=0.2,

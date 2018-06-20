@@ -23,7 +23,7 @@ class KerasIntentClassifier(EngineCore):
                  max_features=10000,
                  embedding_size=64,
                  optimizer='adam',
-                 epochs=5):
+                 epochs=10):
         super(KerasIntentClassifier, self).__init__(
             domain_implement=True,
             intent_implement=True,
