@@ -77,7 +77,7 @@ class NeuralIntentClassifierSlotFiller(EngineCore):
     model_params = {}
 
     def __init__(self, n_epoch=20, batch_size=64, learning_rate=0.001,
-                 hidden_units=32, embedding_size=32, max_decode_step=100,
+                 hidden_units=32, embedding_size=32, max_decode_step=200,
                  bidirectional=True, cell_type='lstm', depth=2,
                  use_residual=False, use_dropout=True, dropout=0.4,
                  output_project_active='tanh', crf_loss=True,
