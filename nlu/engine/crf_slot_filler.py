@@ -329,7 +329,8 @@ class CRFSlotFiller(EngineCore):
             c1=c1,
             c2=c2,
             max_iterations=max_iterations,
-            all_possible_transitions=True
+            all_possible_transitions=True,
+            verbose=True
         )
 
         cv_result = cross_validate(
