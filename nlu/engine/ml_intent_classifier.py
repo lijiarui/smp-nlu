@@ -58,93 +58,156 @@ class MLIntentClassifier(EngineCore):
             ''.join(x).lower() for x in sentence_result
         ]
 
-        y_class = [
-            x
+        y_class_domain = [
+            x.split(SPLITOR)[0]
+            for x in domain_result
+        ]
+
+        y_class_intent = [
+            x.split(SPLITOR)[1]
             for x in domain_result
         ]
 
         with open('/tmp/ml_intent_classifier.tmp', 'w') as fp:
-            for x, y in zip(x_text, y_class):
+            for x, y in zip(x_text, y_class_intent):
                 fp.write('{}\t{}\n'.format(x, y))
 
         x_train = self.vectorizer.fit_transform(x_text)
 
-        class_index = {}
-        index_class = {}
-        for i, c in enumerate(sorted(list(set(y_class)))):
-            class_index[c] = i
-            index_class[i] = c
-        self.class_index = class_index
-        self.index_class = index_class
+        intent_class_index = {}
+        intent_index_class = {}
+        for i, c in enumerate(sorted(list(set(y_class_intent)))):
+            intent_class_index[c] = i
+            intent_index_class[i] = c
+        self.intent_class_index = intent_class_index
+        self.intent_index_class = intent_index_class
 
-        y_train = [self.class_index[x] for x in domain_result]
+        LOG.debug('ml_intent_classifier intent class %s',
+                  len(intent_class_index))
 
-        model = None
+        y_train_intent = [self.intent_class_index[x.split(SPLITOR)[1]]
+                          for x in domain_result]
+
+        domain_class_index = {}
+        domain_index_class = {}
+        for i, c in enumerate(sorted(list(set(y_class_domain)))):
+            domain_class_index[c] = i
+            domain_index_class[i] = c
+        self.domain_class_index = domain_class_index
+        self.domain_index_class = domain_index_class
+
+        LOG.debug('ml_intent_classifier domain class %s',
+                  len(domain_class_index))
+
+        y_train_domain = [self.domain_class_index[x.split(SPLITOR)[0]]
+                          for x in domain_result]
+
+        model_intent = None
+        model_domain = None
         if algorithm == 'RandomForest':
-            model = RandomForestClassifier(
+            model_intent, model_domain = [RandomForestClassifier(
                 random_state=0,
-                class_weight='balanced', n_jobs=-1)
+                class_weight='balanced', n_jobs=-1) for _ in range(2)]
         elif algorithm == 'SVC':
-            model = SVC(
+            model_intent, model_domain = [SVC(
                 random_state=0,
-                probability=True, class_weight='balanced')
+                probability=True, class_weight='balanced') for _ in range(2)]
         elif algorithm == 'LinearSVC':
-            model = LinearSVC(
+            model_intent, model_domain = [LinearSVC(
                 random_state=0,
-                class_weight='balanced')
+                class_weight='balanced') for _ in range(2)]
         else:
             raise Exception('Unknown algorithm "{}"'.format(algorithm))
 
-        return model, x_train, y_train
-
+        return (model_intent, model_domain,
+                x_train, y_train_intent, y_train_domain)
 
     def fit(self,
             sentence_result, domain_result,
             feature='tfidf',
-            algorithm='RandomForest'):
+            algorithm='LinearSVC'):
         """fit model"""
 
         LOG.debug('fit MLIntentClassifier')
-        model, x_train, y_train = self.build_model(
+        (
+            model_intent, model_domain,
+            x_train, y_train_intent, y_train_domain
+        ) = self.build_model(
             sentence_result, domain_result,
             feature, algorithm)
-        self.model = model
-        self.model.fit(x_train, y_train)
+        self.model_intent, self.model_domain = model_intent, model_domain
+        self.model_intent.fit(x_train, y_train_intent)
+        self.model_domain.fit(x_train, y_train_domain)
 
     def predict_domain(self, nlu_obj):
+        """预测领域"""
         tokens = nlu_obj['tokens']
         tokens = [x.lower() for x in tokens]
-        ret = self.predict([tokens])
+        ret = self.predict_domains([tokens])
+
         ml_ret = {
-            'domain': ret[0][0].split(SPLITOR)[0],
-            'intent': ret[0][0].split(SPLITOR)[1],
-            'prob': ret[1][0],
+            'domain': ret[0][0],
+            'domain_prob': ret[1][0],
         }
-        nlu_obj['ml_intent_classifier'] = ml_ret
+        if 'ml_intent_classifier' not in nlu_obj:
+            nlu_obj['ml_intent_classifier'] = {}
+        for k, v in ml_ret.items():
+            nlu_obj['ml_intent_classifier'][k] = v
         if nlu_obj['domain'] is None:
             nlu_obj['domain'] = ml_ret['domain']
-        if nlu_obj['intent'] is None:
-            nlu_obj['intent'] = ml_ret['intent']
         return nlu_obj
 
     def predict_intent(self, nlu_obj):
         """预测意图"""
-        return self.predict_domain(nlu_obj)
+        tokens = nlu_obj['tokens']
+        tokens = [x.lower() for x in tokens]
+        ret = self.predict_intents([tokens])
 
-    def predict(self, sentence_result):
+        ml_ret = {
+            'intent': ret[0][0],
+            'intent_prob': ret[1][0],
+        }
+        if 'ml_intent_classifier' not in nlu_obj:
+            nlu_obj['ml_intent_classifier'] = {}
+        for k, v in ml_ret.items():
+            nlu_obj['ml_intent_classifier'][k] = v
+        if nlu_obj['intent'] is None:
+            nlu_obj['intent'] = ml_ret['intent']
+        return nlu_obj
+
+    def predict_intents(self, sentence_result):
         """预测结果"""
         assert self.vectorizer is not None, 'vectorizer not fitted'
-        assert self.model is not None, 'model not fitted'
+        assert self.model_intent is not None, 'model not fitted'
 
         x_test = self.vectorizer.transform(
             [''.join(x).lower() for x in sentence_result])
-        y_pred = self.model.predict(x_test)
-        if hasattr(self.model, 'predict_proba'):
-            y_prob = self.model.predict_proba(x_test).max(1)
-        else:
-            y_prob = [[-1]] * len(y_pred)
 
-        return [self.index_class[x] for x in y_pred], [x for x in y_prob]
+        y_pred_intent = self.model_intent.predict(x_test)
+        if hasattr(self.model_intent, 'predict_proba'):
+            y_prob_intent = self.model_intent.predict_proba(x_test).max(1)
+        else:
+            y_prob_intent = [[-1]] * len(y_pred_intent)
+
+        return ([self.intent_index_class[x] for x in y_pred_intent],
+                [x for x in y_prob_intent])
+
+    def predict_domains(self, sentence_result):
+        """预测结果"""
+        assert self.vectorizer is not None, 'vectorizer not fitted'
+        assert self.model_domain is not None, 'model not fitted'
+
+        x_test = self.vectorizer.transform(
+            [''.join(x).lower() for x in sentence_result])
+
+        y_pred_domain = self.model_domain.predict(x_test)
+        if hasattr(self.model_domain, 'predict_proba'):
+            y_prob_domain = self.model_domain.predict_proba(x_test).max(1)
+        else:
+            y_prob_domain = [[-1]] * len(y_pred_domain)
+
+        return ([self.domain_index_class[x] for x in y_pred_domain],
+                [x for x in y_prob_domain])
 
     def eval(self, sentence_result, domain_result):
         """评估模型"""
@@ -182,14 +245,26 @@ class MLIntentClassifier(EngineCore):
         """cv方法评估模型"""
         np.random.seed(0)
         ml = MLIntentClassifier()
-        model, x_train, y_train = ml.build_model(
+        (
+            model_intent, model_domain,
+            x_train, y_train_intent, y_train_domain
+        ) = ml.build_model(
             sentence_result, domain_result, feature, algorithm)
         score = make_scorer(f1_score, average='weighted')
+        print('-' * 10 + ' domain test')
         cv_result = cross_validate(
-            model, x_train, y_train,
+            model_domain, x_train, y_train_domain,
             scoring=score, cv=cv, verbose=1
         )
-
+        for k, v in cv_result.items():
+            print(k)
+            print(np.mean(v))
+            print(v)
+        print('-' * 10 + ' intent test')
+        cv_result = cross_validate(
+            model_intent, x_train, y_train_intent,
+            scoring=score, cv=cv, verbose=1
+        )
         for k, v in cv_result.items():
             print(k)
             print(np.mean(v))
@@ -220,26 +295,6 @@ def unit_test():
                 sentence_result, domain_result, cv=5,
                 feature=feature, algorithm=algorithm
             )
-    exit(0)
-
-    eng = MLIntentClassifier()
-    eng.fit(
-        sentence_result, domain_result,
-        feature=feature, algorithm=algorithm)
-
-    LOG.debug('ml fitted')
-
-    metrics = eng.eval(sentence_result, domain_result)
-
-    print('metrics')
-    for k, v in metrics.items():
-        if k != 'bad':
-            print(k, v)
-
-    print('bad count', len(metrics['bad']))
-    for b in metrics['bad']:
-        # sentence, real, pred
-        print('{}\t{}\t{}'.format(b[0], b[1], b[2]))
 
 if __name__ == '__main__':
     unit_test()

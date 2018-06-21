@@ -47,8 +47,8 @@ class RegexItem(object):
                 # else:
                 return temp.format(
                     slot_name=slot_name,
-                    slot_regex=part['text'])
-            return part['text']
+                    slot_regex=clean_re(part['text']))
+            return clean_re(part['text'])
 
         self.patten = re.compile(
             '^' + \
@@ -80,6 +80,15 @@ class RegexItem(object):
                 'pos': reg})
         return ret
 
+def clean_re(x):
+    """去掉特殊字符，下面的地址中包含所有特殊字符
+    Here’s a complete list of the metacharacters; their meanings will be discussed in the rest of this HOWTO.
+    https://docs.python.org/3/howto/regex.html
+    """
+    l = ['.', '^', '$', '*', '+', '?', '{' '}', '[' ']', '\\', '|', '(', ')']
+    for ll in l:
+        x = x.replace(ll, '\\' + ll)
+    return x
 
 class RegexEngine(EngineCore):
     """包含多个RegexItem
@@ -137,15 +146,6 @@ class RegexEngine(EngineCore):
     def get_index_entities_regex(self, entities):
         """将实体列表转换为正则表达式
         """
-        def _clean_re(x):
-            """去掉特殊字符，下面的地址中包含所有特殊字符
-            Here’s a complete list of the metacharacters; their meanings will be discussed in the rest of this HOWTO.
-            https://docs.python.org/3/howto/regex.html
-            """
-            l = ['.', '^', '$', '*', '+', '?', '{' '}', '[' ']', '\\', '|', '(', ')']
-            for ll in l:
-                x = x.replace(ll, '\\' + ll)
-            return x
         ret = {}
         for x in entities:
             assert 'entity' in x and isinstance(x['entity'], str), \
@@ -162,7 +162,7 @@ class RegexEngine(EngineCore):
                 data = shuffle(data, random_state=0)
                 data = data[:LIMIT]
             data = [
-                _clean_re(x)
+                clean_re(x)
                 for x in data
             ]
             r = '(?:' + '|'.join(data) + ')'

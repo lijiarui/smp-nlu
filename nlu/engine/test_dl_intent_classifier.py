@@ -38,11 +38,16 @@ def unit_test():
 
     print('metrics')
     for k, v in metrics.items():
-        if k != 'bad':
+        if k not in ('bad_intent', 'bad_domain'):
             print(k, v)
 
-    print('bad count', len(metrics['bad']))
-    for b in metrics['bad']:
+    print('bad domain count', len(metrics['bad_domain']))
+    for b in metrics['bad_domain']:
+        # sentence, real, pred
+        print('{}\t{}\t{}'.format(b[0], b[1], b[2]))
+
+    print('bad intent count', len(metrics['bad_intent']))
+    for b in metrics['bad_intent']:
         # sentence, real, pred
         print('{}\t{}\t{}'.format(b[0], b[1], b[2]))
 
