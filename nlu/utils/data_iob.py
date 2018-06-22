@@ -52,7 +52,10 @@ def convert_item(intent, index_entities_data, slot_count):
             slot_name = item['name']
             assert slot_name in index_entities_data
             loop.append(
-                int(min(2000, len(index_entities_data[slot_name])) / slot_count[slot_name])
+                int(min(
+                    2000,
+                    len(index_entities_data[slot_name])
+                    ) / slot_count[slot_name])
             )
     loop = max(loop)
     for _ in range(loop):
@@ -90,7 +93,7 @@ def data_to_iob(intents, entities):
     keys = sorted([(k, len(v)) for k, v in index_entities_data.items()], key=lambda x: x[1])
     for k, v in keys:
         LOG.debug('kv %s %s', k, v)
-    
+
     slot_count = {}
     for intent in intents:
         for item in intent['data']:

@@ -275,16 +275,20 @@ class CRFSlotFiller(EngineCore):
             for slot in crf_ret:
                 is_include = False
                 for s in nlu_obj['slots']:
-                    if slot['pos'][0] >= s['pos'][0] and slot['pos'][0] <= s['pos'][1]:
+                    if slot['pos'][0] >= s['pos'][0] \
+                    and slot['pos'][0] <= s['pos'][1]:
                         is_include = True
                         break
-                    elif slot['pos'][1] >= s['pos'][0] and slot['pos'][1] <= s['pos'][1]:
+                    elif slot['pos'][1] >= s['pos'][0] \
+                    and slot['pos'][1] <= s['pos'][1]:
                         is_include = True
                         break
-                    elif s['pos'][0] >= slot['pos'][0] and s['pos'][0] <= slot['pos'][1]:
+                    elif s['pos'][0] >= slot['pos'][0] \
+                    and s['pos'][0] <= slot['pos'][1]:
                         is_include = True
                         break
-                    elif s['pos'][1] >= slot['pos'][0] and s['pos'][1] <= slot['pos'][1]:
+                    elif s['pos'][1] >= slot['pos'][0] \
+                    and s['pos'][1] <= slot['pos'][1]:
                         is_include = True
                         break
                 if not is_include:

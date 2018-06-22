@@ -45,9 +45,10 @@ def load_nlu_data(data_dir):
                     elif 'entity' in obj:
                         assert 'data' in obj, \
                             '实体必须包括“data”属性 “{}”'.format(path)
-                        assert 'copyFrom' in obj or (isinstance(obj['data'], (list, tuple)) \
+                        assert 'copyFrom' in obj \
+                            or (isinstance(obj['data'], (list, tuple)) \
                             and obj['data']), \
-                                '实体必须有copyFrom，或者包括“data”且长度大于0 “{}”'.format(path)
+                                '有copyFrom，或者有“data”且长度大于0 “{}”'.format(path)
                         entities.append(obj)
 
     entities = entity_merge(entities)
@@ -73,7 +74,8 @@ def entity_merge(entities):
         entity_index[entity]['data'] += data
         if 'regex' in obj and isinstance(obj['regex'], str) and obj['regex']:
             entity_index[entity]['regex'] = obj['regex']
-        if 'copyFrom' in obj and isinstance(obj['copyFrom'], str) and obj['copyFrom']:
+        if 'copyFrom' in obj \
+            and isinstance(obj['copyFrom'], str) and obj['copyFrom']:
             entity_index[entity]['copyFrom'] = obj['copyFrom']
     for v in entity_index.values():
         if 'copyFrom' in v and v['copyFrom'] in entity_index:

@@ -15,7 +15,7 @@ LIMIT = 1000
 class RegexItem(object):
     """根据某条intent数据和实体列表，构建一个用于判断intent、domain、slot的对象"""
 
-    SlotNameSplitor = '___'
+    slot_name_splitor = '___'
 
     def __init__(self, intent, index_entities_regex):
         """初始化"""
@@ -41,7 +41,7 @@ class RegexItem(object):
                 if slot_name in index_entities_regex:
                     return temp.format(
                         slot_name=slot_name,
-                        splitor=self.SlotNameSplitor,
+                        splitor=self.slot_name_splitor,
                         index=slot_index[slot_name],
                         slot_regex=index_entities_regex[slot_name])
                 # else:
@@ -76,13 +76,14 @@ class RegexItem(object):
 
             ret['slots'].append({
                 'slot_value': slot_value,
-                'slot_name': slot_name.split(self.SlotNameSplitor)[0],
+                'slot_name': slot_name.split(self.slot_name_splitor)[0],
                 'pos': reg})
         return ret
 
 def clean_re(x):
     """去掉特殊字符，下面的地址中包含所有特殊字符
-    Here’s a complete list of the metacharacters; their meanings will be discussed in the rest of this HOWTO.
+    Here’s a complete list of the metacharacters;
+    their meanings will be discussed in the rest of this HOWTO.
     https://docs.python.org/3/howto/regex.html
     """
     l = ['.', '^', '$', '*', '+', '?', '{' '}', '[' ']', '\\', '|', '(', ')']
