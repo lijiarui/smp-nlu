@@ -373,22 +373,6 @@ def unit_test():
     # print(max([len(x) for x in sentence_result]))
 
     CRFSlotFiller.cv_eval(sentence_result, slot_result, cv=5)
-    exit(0)
-
-    eng = CRFSlotFiller()
-    eng.fit(sentence_result, slot_result)
-
-    LOG.debug('crf fitted')
-
-    m = eng.eval(sentence_result, slot_result)
-    for k, v in m.items():
-        print(k, v)
-
-    acc, bad = eng.exact_eval(sentence_result, slot_result)
-    print('exact acc', acc)
-    print('bad count', len(bad))
-
-    # print(eng.predict([list('我要买第18138期')]))
 
 if __name__ == '__main__':
     unit_test()
