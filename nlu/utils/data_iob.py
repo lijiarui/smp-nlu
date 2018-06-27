@@ -3,11 +3,13 @@
 NLU_LOG_LEVEL=debug python3 -m nlu.utils.data_iob
 """
 
+import re
 import numpy as np
+from sklearn.utils import shuffle
 from joblib import Parallel, delayed
 from nlu.log import LOG
 from nlu.utils.data_utils import SPLITOR
-# from nlu.utils.chinese_aug import chineseAug
+from nlu.utils.chinese_aug import chinese_aug
 
 def get_index_entities_data(entities):
     """转换实体列表到索引"""
@@ -24,6 +26,8 @@ def get_index_entities_data(entities):
         if x['entity'] not in ret:
             ret[x['entity']] = []
         ret[x['entity']] += data
+    for k, v in ret.items():
+        ret[k] = shuffle(v)
     return ret
 
 
@@ -44,6 +48,18 @@ def fill_iob(slot_name, slot_value):
 def convert_item(intent, index_entities_data, slot_count):
     """转换一条"""
 
+    slot_name_index = {}
+    def _choice(slot_name):
+        if slot_name not in slot_name_index:
+            slot_name_index[slot_name] = 0
+        if slot_name_index[slot_name] >= len(index_entities_data[slot_name]):
+            slot_name_index[slot_name] = 0
+        value = index_entities_data[
+            slot_name
+        ][slot_name_index[slot_name]]
+        slot_name_index[slot_name] += 1
+        return value
+
     sentence_results, slot_results, domain_results = [], [], []
 
     loop = [10]
@@ -53,28 +69,54 @@ def convert_item(intent, index_entities_data, slot_count):
             assert slot_name in index_entities_data
             loop.append(
                 int(min(
-                    2000,
+                    500,
                     len(index_entities_data[slot_name])
-                    ) / slot_count[slot_name])
+                    )) # / slot_count[slot_name])
             )
+    
     loop = max(loop)
+    llen = len(re.findall(r'\|', ' '.join([x['text'] for x in intent['data']])))
+    if llen > 0:
+        loop *= llen
+
     for _ in range(loop):
 
         sentence_result = []
         slot_result = []
 
-        for item in intent['data']:
+        for i, item in enumerate(intent['data']):
+            is_tail = (i == len(intent['data']) - 1)
             if 'name' in item:
                 slot_name = item['name']
-                slot_value = np.random.choice(index_entities_data[slot_name])
+                slot_value = _choice(slot_name)
 
                 sentence_result += list(slot_value)
                 slot_result += fill_iob(slot_name, slot_value)
+                if is_tail:
+                    tail = chinese_aug('', en_tail=True)
+                    if tail:
+                        sentence_result += list(tail)
+                        slot_result += ['O'] * len(tail)
             else:
-                sentence_result += list(item['text'])
-                slot_result += ['O'] * len(item['text'])
+                text = item['text']
+                # 转换 [[要|想要]] => 随机一个
+                text = re.sub(
+                    r'\[\[([^\]]+)\]\]',
+                    lambda x: np.random.choice(x.group(1).split('|')),
+                    text)
+                # 文字尾部强化
+                if is_tail:
+                    text = chinese_aug(text, en_tail=True)
+                else:
+                    text = chinese_aug(text, en_tail=False)
+                sentence_result += list(text)
+                slot_result += ['O'] * len(text)
 
         domain_result = str(intent['domain']) + SPLITOR + str(intent['intent'])
+
+        # if len(intent['data']) == 2 and 'B_date' in slot_result:
+        #     print(sentence_result)
+        #     print(slot_result)
 
         sentence_results.append(sentence_result)
         slot_results.append(slot_result)
@@ -117,6 +159,13 @@ def data_to_iob(intents, entities):
         slot_result += r2
         domain_result += r3
 
+    with open('/tmp/nlu_iob.txt', 'w') as fp:
+        for a, b, c in zip(sentence_result, slot_result, domain_result):
+            fp.write('\t'.join(a) + '\n')
+            fp.write('\t'.join(b) + '\n')
+            fp.write(c + '\n')
+            fp.write('\n')
+    
     LOG.debug('return IOB data')
     return sentence_result, slot_result, domain_result
 

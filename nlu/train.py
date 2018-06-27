@@ -21,8 +21,8 @@ def pipline():
 
     pipline_config = [
         'regex_engine',
-        'ml_intent_classifier',
-        'crf_slot_filler',
+        # 'ml_intent_classifier',
+        # 'crf_slot_filler',
         'dl_intent_classifier',
         'neural_slot_filler',
         # 'neural_intent_classifier_slot_filler',
@@ -40,6 +40,7 @@ def build_model(nlu_data, model_dir, pipline_config):
     intents, entities = load_nlu_data(nlu_data)
     iob = [None, None, None]
     def _get_iob(iob):
+        """load iob only once"""
         if iob[0] is None:
             LOG.info('build IOB data')
             (sentence_result,

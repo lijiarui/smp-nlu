@@ -6,6 +6,7 @@ NLU_LOG_LEVEL=debug python3 -m nlu.engine.regex_engine
 """
 
 import re
+import numpy as np
 from sklearn.utils import shuffle
 from nlu.log import LOG
 from nlu.engine.engine_core import EngineCore
@@ -48,7 +49,21 @@ class RegexItem(object):
                 return temp.format(
                     slot_name=slot_name,
                     slot_regex=clean_re(part['text']))
-            return clean_re(part['text'])
+            text = part['text']
+            place = []
+            def choice(x):
+                x = x.group(1).split('|')
+                place_id = '__place__{}__'.format(len(place))
+                place.append((place_id, '(?:' + '|'.join([clean_re(xx) for xx in x]) + ')'))
+                return place_id
+            text = re.sub(
+                r'\[\[([^\]]+)\]\]',
+                choice,
+                text)
+            text = clean_re(text)
+            for k, v in place:
+                text = text.replace(k, v)
+            return text
 
         self.patten = re.compile(
             '^' + \

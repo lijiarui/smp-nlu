@@ -20,15 +20,18 @@ def de_re(_):
     return '的'
 
 def tail(sentence):
-    if np.random.random() < 0.2:
-        s = np.random.choice(['。', '？', '！', '…', '的', '吧'])
+    if np.random.random() < 0.5:
+        s = np.random.choice([
+            '。', '？', '！', '…', '的', '吧', '的吧', '呢', '呢？', '的呢', '啦'
+        ])
         if not sentence.endswith(s):
             sentence += s
     return sentence
 
-def chinese_aug(sentence):
+def chinese_aug(sentence, en_tail=False):
     """对中文进行数据增强"""
-    sentence = re.sub(r'\s', space_re, sentence)
+    # sentence = re.sub(r'\s', space_re, sentence)
     sentence = re.sub(r'的', de_re, sentence)
-    sentence = tail(sentence)
+    if en_tail:
+        sentence = tail(sentence)
     return sentence
