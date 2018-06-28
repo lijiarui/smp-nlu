@@ -69,7 +69,7 @@ def convert_item(intent, index_entities_data, slot_count):
             assert slot_name in index_entities_data
             loop.append(
                 int(min(
-                    500,
+                    7000,
                     len(index_entities_data[slot_name])
                     )) # / slot_count[slot_name])
             )
