@@ -2,6 +2,7 @@
 
 import os
 import json
+import time
 import pickle
 import simplejson
 from flask import Flask, jsonify
@@ -48,20 +49,23 @@ def web_parse(sentence=None):
         'tokens': list(sentence),
     }
 
+    start_time = time.time()
+
     LOG.debug('start %s models', len(MODELS))
     for model_name, model in MODELS:
-        LOG.debug('through %s model', model_name)
+        LOG.debug('through %s model %s', model_name, time.time() - start_time)
         if model.domain_implement:
-            LOG.debug('through %s model predict_domain', model_name)
+            LOG.debug('through %s model predict_domain %s', model_name, time.time() - start_time)
             nlu_obj = model.predict_domain(nlu_obj)
         if model.intent_implement:
-            LOG.debug('through %s model predict_intent', model_name)
+            LOG.debug('through %s model predict_intent %s', model_name, time.time() - start_time)
             nlu_obj = model.predict_intent(nlu_obj)
         if model.slot_implement:
-            LOG.debug('through %s model predict_slot', model_name)
+            LOG.debug('through %s model predict_slot %s', model_name, time.time() - start_time)
             nlu_obj = model.predict_slot(nlu_obj)
 
-    print(nlu_obj)
+    # print(nlu_obj)
+    LOG.debug('return %s', time.time() - start_time)
     return APP.response_class(
         response=simplejson.dumps({
             'success': True,
