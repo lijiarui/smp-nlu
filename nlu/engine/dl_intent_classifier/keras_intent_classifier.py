@@ -1,6 +1,7 @@
 """classify intent by keras(tensorflow)"""
 
 import os
+import json
 from tensorflow import keras
 import tensorflow as tf
 import numpy as np
@@ -9,6 +10,7 @@ from sklearn.utils import class_weight
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from nlu.engine.engine_core import EngineCore
 from nlu.utils.data_utils import SPLITOR
+from nlu.log import LOG
 
 class KerasIntentClassifier(EngineCore):
     """keras model wrapper"""
@@ -57,7 +59,7 @@ class KerasIntentClassifier(EngineCore):
             max_features,
             embedding_size
         )(model)
-        model = keras.layers.Dropout(0.25)(model)
+        model = keras.layers.Dropout(0.2)(model)
         model = keras.layers.LSTM(32, recurrent_dropout=0.05)(model)
 
         domain_model = model
@@ -142,33 +144,58 @@ class KerasIntentClassifier(EngineCore):
             maxlen=self.model_params['max_len']
         )
 
-        self.ohe_domain = ohe_domain = OneHotEncoder(n_target_domain)
         y_target_domain = [label_index_domain[y] for y in y_target_domain]
+        self.ohe_domain = ohe_domain = OneHotEncoder(n_target_domain)
         ohe_domain.fit(np.array(y_target_domain).reshape(-1, 1))
         y_train_domain = ohe_domain.transform(
             np.array(y_target_domain).reshape(-1, 1)
         )
 
-        self.ohe_intent = ohe_intent = OneHotEncoder(n_target_intent)
         y_target_intent = [label_index_intent[y] for y in y_target_intent]
+        self.ohe_intent = ohe_intent = OneHotEncoder(n_target_intent)
         ohe_intent.fit(np.array(y_target_intent).reshape(-1, 1))
         y_train_intent = ohe_intent.transform(
             np.array(y_target_intent).reshape(-1, 1)
         )
 
-        cw_domain = class_weight.compute_class_weight('balanced', np.unique(y_target_domain), y_target_domain)
-        cw_intent = class_weight.compute_class_weight('balanced', np.unique(y_target_intent), y_target_intent)
+        # def make_class_weight(arr):
+        #     ret = {}
+        #     for i in range(len(arr)):
+        #         ret[i] = arr[i]
+        #     return ret
 
+        # def get_class_weights(y):
+            # from collections import Counter
+            # counter = Counter(y)
+            # majority = max(counter.values())
+            # return  {
+            #     cls: float(majority/count)
+            #     for cls, count in counter.items()
+            # }
+
+        # cw_domain = make_class_weight(class_weight.compute_class_weight(
+        #     'balanced', np.unique(y_target_domain), y_target_domain))
+        # cw_intent = make_class_weight(class_weight.compute_class_weight(
+        #     'balanced', np.unique(y_target_intent), y_target_intent))
+
+        # cw_domain = get_class_weights(y_target_domain)
+        # cw_intent = get_class_weights(y_target_intent)
+
+        # LOG.debug('cw_domain %s', cw_domain)
+        # LOG.debug('cw_intent %s', cw_intent)
+
+        # @TODO multiple output weights not available for now
         with self.graph.as_default():
             keras.backend.set_session(self.sess)
             self.build_model()
             self.model.fit(
                 x_train, [y_train_domain, y_train_intent],
-                epochs=self.model_params['epochs'],
-                class_weight={
-                    'do': cw_domain,
-                    'io': cw_intent
-                }
+                epochs=self.model_params['epochs']
+                # ,
+                # class_weight={
+                #     'do': cw_domain,
+                #     'io': cw_intent
+                # }
             )
 
     def predict(self, sentence_result):

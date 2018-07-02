@@ -20,11 +20,11 @@ def pipline():
     model_dir = './tmp/nlu_model'
 
     pipline_config = [
-        'regex_engine',
+        # 'regex_engine',
         # 'ml_intent_classifier',
         # 'crf_slot_filler',
         'dl_intent_classifier',
-        'neural_slot_filler',
+        # 'neural_slot_filler',
         # 'neural_intent_classifier_slot_filler',
     ]
 
