@@ -22,7 +22,7 @@ def de_re(_):
 def tail(sentence):
     if np.random.random() < 0.5:
         s = np.random.choice([
-            '。', '？', '！', '…', '的', '吧', '的吧', '呢', '呢？', '的呢', '啦'
+            '。', '？', '！', '…', '的', '吧', '的吧', '呢', '呢？', '的呢', '啦', '啊', '阿', '了'
         ])
         if not sentence.endswith(s):
             sentence += s

@@ -190,7 +190,8 @@ class KerasIntentClassifier(EngineCore):
             self.build_model()
             self.model.fit(
                 x_train, [y_train_domain, y_train_intent],
-                epochs=self.model_params['epochs']
+                epochs=self.model_params['epochs'],
+                batch_size=128
                 # ,
                 # class_weight={
                 #     'do': cw_domain,

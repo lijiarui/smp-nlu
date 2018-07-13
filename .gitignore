@@ -5,3 +5,4 @@
 tmp
 node_modules
 nlu_data/*.yml
+nlu_data/**/*.yml

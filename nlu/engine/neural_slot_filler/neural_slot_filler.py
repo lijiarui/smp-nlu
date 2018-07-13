@@ -75,11 +75,11 @@ class NeuralSlotFiller(EngineCore):
     model_params = {}
 
     def __init__(self, n_epoch=10, batch_size=128, learning_rate=0.001,
-                 hidden_units=32, embedding_size=32, max_decode_step=200,
-                 bidirectional=True, cell_type='lstm', depth=2,
-                 use_residual=False, use_dropout=True, dropout=0.4,
+                 hidden_units=64, embedding_size=64, max_decode_step=200,
+                 bidirectional=True, cell_type='lstm', depth=1,
+                 use_residual=False, use_dropout=True, dropout=0.2,
                  output_project_active='tanh', crf_loss=True,
-                 use_gpu=False):
+                 use_gpu=True):
         super(NeuralSlotFiller, self).__init__(
             domain_implement=False,
             intent_implement=False,
@@ -128,7 +128,6 @@ class NeuralSlotFiller(EngineCore):
 
         self.config = config = tf.ConfigProto(
             device_count={
-                'CPU': 0 if use_gpu else 1,
                 'GPU': 1 if use_gpu else 0,
             },
             allow_soft_placement=True,
@@ -243,7 +242,7 @@ class NeuralSlotFiller(EngineCore):
         self.domain_implement = state['domain_implement']
         self.intent_implement = state['intent_implement']
         self.slot_implement = state['slot_implement']
-        
+
         self.x_ws = state['x_ws']
         self.y_ws = state['y_ws']
         self.model_bytes = state['model_bytes']
@@ -253,16 +252,16 @@ class NeuralSlotFiller(EngineCore):
         # print('self.model_params', state['model_params'])
         # exit(1)
         self.restore_model()
-    
+
     def get_params(self, deep=True):
         return self.model_params
-    
+
     def set_params(self, n_epoch=20, batch_size=128, learning_rate=0.001,
                    hidden_units=64, embedding_size=64,
                    bidirectional=True, cell_type='lstm', depth=1,
                    use_residual=False, use_dropout=True, dropout=0.2,
                    output_project_active='tanh', crf_loss=True,
-                   use_gpu=False):
+                   use_gpu=True):
         self.model_params = {
             # 'max_decode_step': max_decode_step,
             'batch_size': batch_size,
